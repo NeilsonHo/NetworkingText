@@ -5,11 +5,15 @@ import android.os.Bundle;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.List;
 
+import android.provider.DocumentsContract;
 import android.util.Log;
+import android.util.Xml;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -26,11 +30,15 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParserFactory;
 
 public class NetworkingActivity extends Activity {
     String name="";
     @Override
     public void onCreate(Bundle savedInstanceState) {
+        //note-> scroll down for more code
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
         final EditText et = (EditText)findViewById(R.id.editText);
@@ -44,13 +52,10 @@ public class NetworkingActivity extends Activity {
                 new AccessWebServiceTask().execute(name);
             }
         });
-
-
-
         // ---access a Web Service∫ using GET---
 
     }
-
+    //this function from the example opens and check if the urlString exists
     private InputStream OpenHttpConnection(String urlString)
             throws IOException {
         InputStream in = null;
@@ -78,6 +83,69 @@ public class NetworkingActivity extends Activity {
         return in;
     }
 
+    //xmlParser function
+    private String xmlParser(String word) throws XmlPullParserException{
+        //ignore any list and Word objects
+        InputStream in = null;
+        String s1=word+"\n";
+        XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
+        factory.setNamespaceAware(true);
+        XmlPullParser xpp = factory.newPullParser();
+        //List<Word> defList = null;
+        try {
+            in = OpenHttpConnection("http://services.aonaware.com/DictService/DictService.asmx/Define?word="
+                    + word);
+            xpp.setInput(in, null);
+            int eventType = xpp.getEventType();
+
+            //basically the eventType parses everything in the document from top to bottom
+            while (eventType != XmlPullParser.END_DOCUMENT) {
+                //Word temp = new Word();
+                //String tagName = xpp.getName();
+                if (eventType == XmlPullParser.START_DOCUMENT) {
+
+                }
+                else if (eventType == XmlPullParser.END_DOCUMENT) {
+
+                }
+                else if (eventType == XmlPullParser.START_TAG) {
+                    //this block checks if the eventType = to any <start tag>
+                    //also the following the if checks eventType equals to the following tags
+                    /*
+                        if (xpp.getName().equalsIgnoreCase("word")){
+                        if(xpp.next() == XmlPullParser.TEXT) {
+                            //temp.set_id(xpp.getText());
+                            s1+=xpp.getText()+"\n";
+                        }
+                    }
+                    else if (xpp.getName().equalsIgnoreCase("wordDefinition")){
+                        if(xpp.next() == XmlPullParser.TEXT) {
+                            //temp.setDefinition(xpp.getText());
+                            s1+=xpp.getText();
+                        }
+                    }
+                    */
+                }
+                else if (eventType == XmlPullParser.END_TAG) {
+
+                }
+                else if (eventType == XmlPullParser.TEXT) {
+                    //this blocks takes everything between the start and end tag
+                    s1+=xpp.getText();
+                }
+                eventType = xpp.next();
+            }
+
+        } catch (IOException e) {
+            Log.d("NetworkingActivity", e.getLocalizedMessage());
+        }
+        //for(int i=0;i<=defList.size();i++) {
+        //}
+        //s1 = defList.get(0).getDefinition();
+        return s1;//returns the string
+    }
+
+    //DOM parser
     private String WordDefinition(String word) {
         InputStream in = null;
         String strDefinition = "";
@@ -138,27 +206,35 @@ public class NetworkingActivity extends Activity {
                                 .item(0))
                                 .getNodeValue()
                                 + ". \n";
-                    }
-
-                }
-            }
+                    }//end of for loop j
+                }//end of if
+            }//end of for loop i
         } catch (IOException e1) {
             Log.d("NetworkingActivity", e1.getLocalizedMessage());
         }
         // ---return the definitions of the word---
         return strDefinition;
-    }
+    }//end of WordDefinition function
 
     private class AccessWebServiceTask extends
             AsyncTask<String, Void, String> {
-        protected String doInBackground(String... urls) {
-            return WordDefinition(urls[0]);
+        protected String doInBackground(String... urls)  {
+            //this block is for xmlParser
+            String str="";
+            try {
+                str=xmlParser(urls[0]);
+            } catch (XmlPullParserException e) {
+                e.printStackTrace();
+            }
+            return str;
+            //this line is for DOM parser
+            //return WordDefinition(urls[0]);
         }
 
         protected void onPostExecute(String result) {
             TextView tv = (TextView) findViewById(R.id.textView2);
             tv.setText(result);
         }
-    }
+    }//end of AccessWebServiceTask class
 
 }
